@@ -1,9 +1,10 @@
-fastapi
-uvicorn
+fastapi==0.110.0
+uvicorn==0.29.0
 python-multipart
-ultralytics
-opencv-python-headless
 pillow
 numpy
-torch==2.2.2+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
-torchvision==0.17.2+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+opencv-python-headless
+ultralytics
+torch==2.2.2+cpu
+torchvision==0.17.2+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
