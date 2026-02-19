@@ -1,59 +1,41 @@
-from flask import Flask, jsonify, request
-from flask_cors import CORS
+from flask import Flask, request, jsonify
+from ultralytics import YOLO
+import cv2
 import numpy as np
-import os
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
 
 app = Flask(__name__)
-CORS(app)
 
-model = load_model("drone_model.h5")
+model = YOLO("best.pt")
 
-class_names = ['DJI_Mavic_3', 'Autel_EVO_II', 'Parrot_Anafi']
+def preprocess(img):
+    img = cv2.GaussianBlur(img, (5,5), 0)
+    img = cv2.detailEnhance(img, sigma_s=10, sigma_r=0.15)
+    return img
 
+@app.route("/detect", methods=["POST"])
+def detect():
+    file = request.files["image"]
+    img = cv2.imdecode(np.frombuffer(file.read(), np.uint8), cv2.IMREAD_COLOR)
 
-@app.route("/")
-def home():
-    return "Drone AI Server Running"
+    img = preprocess(img)
 
+    results = model(img)[0]
 
-@app.route("/predict", methods=["POST"])
-def predict():
+    if len(results.boxes) == 0:
+        return jsonify({"drone": "Unknown", "confidence": 0})
 
-    if 'image' not in request.files:
-        return jsonify({"error": "No image uploaded"})
+    cls = int(results.boxes.cls[0])
+    conf = float(results.boxes.conf[0])
 
-    file = request.files['image']
-    img_path = "temp.jpg"
-    file.save(img_path)
-
-    # -------- LOAD MODEL --------
-    from tensorflow.keras.models import load_model
-    import numpy as np
-    from tensorflow.keras.preprocessing import image
-
-    model = load_model("model.h5")   # <-- tumhara trained model
-    class_names = ["DJI Mavic 3", "Autel EVO II Pro", "Parrot Anafi"]
-
-    # -------- IMAGE PROCESS --------
-    img = image.load_img(img_path, target_size=(224, 224))
-    img_array = image.img_to_array(img) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
-
-    preds = model.predict(img_array)
-    index = np.argmax(preds)
-    confidence = float(preds[0][index])
-
-    detected_drone = class_names[index]
+    drone_names = {
+        0: "Autel EVO II",
+        1: "DJI Mavic 3",
+        2: "Parrot Anafi"
+    }
 
     return jsonify({
-        "drone": detected_drone,
-        "confidence": confidence
+        "drone": drone_names.get(cls, "Unknown"),
+        "confidence": round(conf * 100, 2)
     })
 
-
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+app.run(host="0.0.0.0", port=5000)
