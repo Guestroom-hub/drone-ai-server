@@ -2,6 +2,9 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import os
 import mysql.connector
+print("RAW PREDICTION:", preds)
+print("ARGMAX:", np.argmax(preds))
+print("CLASS:", class_names[np.argmax(preds)])
 
 app = Flask(__name__)
 CORS(app)
