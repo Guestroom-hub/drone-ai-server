@@ -28,20 +28,30 @@ def predict():
     img_path = "temp.jpg"
     file.save(img_path)
 
-    img = image.load_img(img_path, target_size=(224,224))
-    img_array = image.img_to_array(img)
-    img_array = img_array / 255.0
+    # -------- LOAD MODEL --------
+    from tensorflow.keras.models import load_model
+    import numpy as np
+    from tensorflow.keras.preprocessing import image
+
+    model = load_model("model.h5")   # <-- tumhara trained model
+    class_names = ["DJI Mavic 3", "Autel EVO II Pro", "Parrot Anafi"]
+
+    # -------- IMAGE PROCESS --------
+    img = image.load_img(img_path, target_size=(224, 224))
+    img_array = image.img_to_array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
     preds = model.predict(img_array)
-    class_index = int(np.argmax(preds))
-    confidence = float(np.max(preds))
-    drone_name = class_names[class_index]
+    index = np.argmax(preds)
+    confidence = float(preds[0][index])
+
+    detected_drone = class_names[index]
 
     return jsonify({
-        "drone": drone_name,
+        "drone": detected_drone,
         "confidence": confidence
     })
+
 
 
 if __name__ == "__main__":
