@@ -1,41 +1,17 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+import numpy as np
 import os
-import mysql.connector
-print("RAW PREDICTION:", preds)
-print("ARGMAX:", np.argmax(preds))
-print("CLASS:", class_names[np.argmax(preds)])
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing import image
 
 app = Flask(__name__)
 CORS(app)
 
-# -------------------------------
-# DATABASE CONNECTION FUNCTION
-# -------------------------------
+model = load_model("drone_model.h5")
 
-def get_drone_info(drone_name):
-    try:
-        conn = mysql.connector.connect(
-            host="localhost",        # <-- yahan apna host daalo
-            user="u683932415_oetnab",        # <-- yahan apna username
-            password="1Mpre$$10n@2023",    # <-- yahan apna password
-            database="u683932415_oetnab"     # <-- yahan apna database name
-        )
+class_names = ['DJI_Mavic_3', 'Autel_EVO_II', 'Parrot_Anafi']
 
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM drones WHERE drone_name=%s", (drone_name,))
-        result = cursor.fetchone()
-
-        conn.close()
-        return result
-
-    except Exception as e:
-        return {"error": str(e)}
-
-
-# -------------------------------
-# ROUTES
-# -------------------------------
 
 @app.route("/")
 def home():
@@ -45,42 +21,28 @@ def home():
 @app.route("/predict", methods=["POST"])
 def predict():
 
-    # Yahan future me AI image processing hoga
-    # Abhi demo ke liye fixed drone name use kar rahe hain
-    detected_drone = "DJI Mavic 3"
+    if 'image' not in request.files:
+        return jsonify({"error": "No image uploaded"})
 
-    drone_info = get_drone_info(detected_drone)
+    file = request.files['image']
+    img_path = "temp.jpg"
+    file.save(img_path)
 
-    if drone_info:
-        return jsonify(drone_info)
-    else:
-        return jsonify({"error": "Drone not found"})
+    img = image.load_img(img_path, target_size=(224,224))
+    img_array = image.img_to_array(img)
+    img_array = img_array / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
 
+    preds = model.predict(img_array)
+    class_index = int(np.argmax(preds))
+    confidence = float(np.max(preds))
+    drone_name = class_names[class_index]
 
-# -------------------------------
-# RENDER PORT FIX
-# -------------------------------
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
-from flask import Flask, jsonify
-from flask_cors import CORS
-import os
-
-app = Flask(__name__)
-CORS(app)
-
-@app.route("/")
-def home():
-    return "Drone AI Server Running"
-
-@app.route("/predict", methods=["POST"])
-def predict():
     return jsonify({
-        "drone": "DJI Mavic 3",
-        "confidence": 0.95
+        "drone": drone_name,
+        "confidence": confidence
     })
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
