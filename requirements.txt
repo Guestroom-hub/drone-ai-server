@@ -1,4 +1,6 @@
 flask
-flask-cors
-gunicorn
-mysql-connector-python
+ultralytics
+opencv-python-headless
+numpy
+torch
+torchvision
