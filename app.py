@@ -12,6 +12,10 @@ def preprocess(img):
     img = cv2.detailEnhance(img, sigma_s=10, sigma_r=0.15)
     return img
 
+@app.route("/")
+def home():
+    return "Drone AI Server Running Successfully 🚀"
+
 @app.route("/detect", methods=["POST"])
 def detect():
     file = request.files["image"]
@@ -37,6 +41,6 @@ def detect():
         "drone": drone_names.get(cls, "Unknown"),
         "confidence": round(conf * 100, 2)
     })
+
 if __name__ == "__main__":
     app.run()
-
