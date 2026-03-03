@@ -12,7 +12,15 @@ def home():
 
 @app.route("/predict", methods=["POST"])
 def predict():
+
+    if "image" not in request.files:
+        return jsonify({"error": "No image file received"}), 400
+
     file = request.files["image"]
+
+    if file.filename == "":
+        return jsonify({"error": "Empty filename"}), 400
+
     filepath = "temp.jpg"
     file.save(filepath)
 
@@ -32,4 +40,5 @@ def predict():
     })
 
 if __name__ == "__main__":
+
     app.run(host="0.0.0.0", port=10000)
